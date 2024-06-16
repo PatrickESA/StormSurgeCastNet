@@ -1,0 +1,34 @@
+name: surgecast # update conda via "conda update --force -n base -c defaults conda" and set up via "conda env create -p envs/surgecast --file environment.yml"
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - ecf
+  - iopath
+dependencies:
+  - python=3.11
+  - matplotlib=3.8.3
+  - pillow=10.2.0
+  - einops=0.7.0
+  - beartype=0.17.2
+  - pytorch 2.2
+  - pytorch-cuda 11.8
+  - torchvision=0.17.0
+  - wandb=0.16.3
+  - scipy=1.12.0
+  - scikit-image=0.22.0
+  - cdsapi=0.6.1
+  - rasterio=1.3.9
+  - gdal=3.8.4
+  - geopandas=0.14.3
+  - xarray=2024.1.0
+  - rioxarray=0.15.1
+  - netcdf4=1.6.4
+  - dask=2023.6.0
+  - utide=0.3.0
+  - iopath=0.1.9
+  - pip
+  - pip:
+    - global-land-mask
+    - eccodes
+    - gdown

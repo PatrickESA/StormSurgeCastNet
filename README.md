@@ -1,6 +1,6 @@
 # Implicit Assimilation of Sparse In Situ Data for Dense & Global Storm Surge Forecasting
 
-![banner](samples.png)
+![banner](assets/samples.png)
 >
 > _This is the official repository for the storm surge forecasting work of Ebel et al (2024), featuring the curation of a global and multi-decadal dataset of extreme weather induced storm surges as well as the implementation of neural networks for addressing the associated forecasting task. The provided dataset is multi-modal and features preprocessed in-situ tide gauge records as well as atmospheric reanalysis products and ocean state simulations. 
 > The models applied in this work learn to fuse the sparse yet accurate in-situ measurements with the global ocean and atmosphere state products. This way, more accurate storm surge forecasts are achieved, with predictions broadcasted to sites missing well-maintained tidal gauge infrastructure._
@@ -10,29 +10,64 @@ This repository contains code accompanying the paper
 
 For additional information:
 
-* The publication is available as a preprint on arXiv https://arxiv.org/abs/2404.05758
+* The publication is available in the proceedings https://openaccess.thecvf.com/content/CVPR2024W/EarthVision/html/Ebel_Implicit_Assimilation_of_Sparse_In_Situ_Data_for_Dense__CVPRW_2024_paper.html
 * For any further questions, please reach out to me here or via the credentials on my [website](https://pwjebel.com).
 ---
 
-![Image](map.jpg)
+![Image](assets/map.jpg)
 
 ## Installation
 
-**TBA, we'll address this as soon as possible!**
+#### Code
+
+Clone the repository and change into the created folder:
+```
+git clone https://github.com/PatrickESA/StormSurgeCastNet.git
+cd StormSurgeCastNet
+```
+
+Set up a conda environment as follows:	
+```
+conda env create -p envs/surgecast --file environment.yml 
+conda activate envs/surgecast
+ ```
+
+The code is written in Python 3 and uses PyTorch 2.0. It is strongly recommended to run the code with CUDA and GPU support. The code has been developed and deployed in Ubuntu 20 LTS and should be able to run in any comparable OS.
+
+#### Data
+
+Create an account on the [Copernicus CDS](https://cds.climate.copernicus.eu/#!/home) platform and install the API for data access. Download (parts of) the needed data
+```
+python ./utils/download_data.py
+ ```
+
+and subsequently place all data into a desired directory `$DATADIR`, which you can later point all scripts towards via the flag `--root $DATADIR`.
 
 ---
 
-<p align="center"><img src="teaser.png" width="600" height="500"></p>
+<p align="center"><img src="assets/teaser.png" width="600" height="500"></p>
 
 ## Usage
 
-**TBA, we'll address this as soon as possible!**
+You can train a new model via
+
+```
+python train.py --experiment_name myFirstRun --root $DATADIR --weight_folder ./results --model utae 
+```
+
+and you can test a (pre-)trained model via
+
+```
+python test.py --experiment_name myFirstRun --root $DATADIR --weight_folder ./results
+```
+
+For a list and description of other useful flags (e.g. `--hyperlocal`, `--input_t`, `--lead_time`), please see the parser file [./parse_args.py](https://github.com/PatrickESA/StormSurgeCastNet/blob/main/parse_args.py). You can find pre-trained models [here](https://drive.google.com/drive/folders/149oGPROey-8u3TkLksnGBn7BZYypMi1J?usp=sharing).
 
 ---
 
 ## References
 
-If you use this code, our models or data set for your research, please cite [this](https://arxiv.org/abs/2404.05758) publication:
+If you use this code, our models or data set for your research, please cite [this](https://openaccess.thecvf.com/content/CVPR2024W/EarthVision/html/Ebel_Implicit_Assimilation_of_Sparse_In_Situ_Data_for_Dense__CVPRW_2024_paper.html) publication:
 ```bibtex
 @inproceedings{StormSurgeCastNet,
         title = {{Implicit Assimilation of Sparse In Situ Data for Dense & Global Storm Surge Forecasting}},
@@ -40,7 +75,7 @@ If you use this code, our models or data set for your research, please cite [thi
         booktitle = {Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition Workshops},
         year = {2024},
         organization = {IEEE},
-        url = {"https://arxiv.org/abs/2404.05758"}
+        url = {"https://openaccess.thecvf.com/content/CVPR2024W/EarthVision/html/Ebel_Implicit_Assimilation_of_Sparse_In_Situ_Data_for_Dense__CVPRW_2024_paper.html"}
 } 
 ```
 
