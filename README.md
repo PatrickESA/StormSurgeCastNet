@@ -36,12 +36,11 @@ The code is written in Python 3 and uses PyTorch 2.0. It is strongly recommended
 
 #### Data
 
-Create an account on the [Copernicus CDS](https://cds.climate.copernicus.eu/#!/home) platform and install the API for data access. Download (parts of) the needed data
+Create an account on the [Copernicus CDS](https://cds.climate.copernicus.eu/#!/home) platform and install the API for data access. Download (parts of) the data via
 ```
 python ./utils/download_data.py
  ```
-
-and subsequently place all data into a desired directory `$DATADIR`, which you can later point all scripts towards via the flag `--root $DATADIR`.
+This contains data from Copernicus CDS as well as from the publication's acccompanying [Zenodo](https://zenodo.org/records/11846592) repository. Subsequently place all data into a desired directory `$DATADIR`, which you can later point all scripts towards via the flag `--root $DATADIR`.
 
 ---
 
