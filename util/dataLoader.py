@@ -306,7 +306,7 @@ class coastalLoader(Dataset):
         self.geslaD  = gesla.GeslaDataset(gesla_meta, gesla_path)
 
         # open the actual data
-        self.ncGESLA = xr.open_dataset(filename_or_obj=os.path.join(self.root_dir, 'combined_gesla_surge_5h.nc'), engine='netcdf4')
+        self.ncGESLA = xr.open_dataset(filename_or_obj=os.path.join(self.root_dir, 'combined_gesla_surge.nc'), engine='netcdf4')
         
         # remove gauges from meta records that may be missing in self.ncGESLA (e.g. due to preprocessing filtering) and vice versa
         missing_in_xr = set(self.meta.index.values) - set(np.intersect1d(self.ncGESLA.station.values, self.meta.index.values))

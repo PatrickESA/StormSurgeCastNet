@@ -9,17 +9,26 @@ import numpy as np
 # to monitor your request queue on C3S, see:
 # https://cds.climate.copernicus.eu/cdsapp#!/yourrequests?tab=form
 
+store_at = os.path.expanduser('~/Data2')
+
 # select the desired data in-line
-dl_era5  = False	# ERA5
-dl_gtsm  = False	# GTSM
-dl_gesla = False 	# GESLA3
-dl_lsm   = True		# land-sea mask
+dl_era5  = True	# ERA5
+dl_gtsm  = True	# GTSM
+dl_gesla = True	# GESLA3
+dl_aux   = True	# auxiliary data
 
 if __name__ == "__main__":
 
+	if not os.path.exists(store_at): os.makedirs(store_at)
+	
 	if dl_era5:
 		# fetch ERA5 data,
 		# see https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels
+
+		era5_dir = os.path.join(store_at, 'ERA5', 'stormSurge_hourly_79_18')
+		if not os.path.exists(era5_dir): os.makedirs(era5_dir)
+		print(f'Downloading ERA5 data to {era5_dir}.')
+		os.chdir(store_at)
 
 		# for ERA5 downloads, the parameters need to be iterated (joint processing is too large)
 		var_long  = ['10m_u_component_of_wind', '10m_v_component_of_wind', 'mean_sea_level_pressure']
@@ -70,16 +79,23 @@ if __name__ == "__main__":
 						],
 						'year': [str(year) for year in interval],
 					},
-					"{}_{:02d}.nc".format(var_short[jdx], idx+1))
+					os.path.join(era5_dir, "{}_{:02d}.nc".format(var_short[jdx], idx+1)))
 
 	if dl_gtsm: 
 		# fetch GTSM sea level data,
 		# see https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-water-level-change-timeseries-cmip6
 		# and https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-water-level-change-timeseries
 
+		gtsm_dir = os.path.join(store_at, 'GTSM', 'reanalysis')
+		if not os.path.exists(gtsm_dir): os.makedirs(gtsm_dir)
+		os.path.join(gtsm_dir, 'reanalysis_surge_hourly_*_v1.nc')
+		print(f'Downloading GTSM data to {gtsm_dir}.')
+		os.chdir(gtsm_dir)
+
 		for month in range(1,13): 
 			print(f'Fetching GTSM data for month {month}')
 			
+			file_path = os.path.join(gtsm_dir, 'download{:02d}.zip'.format(month))
 			c.retrieve(
 				'sis-water-level-change-timeseries-cmip6',
 				{
@@ -107,14 +123,44 @@ if __name__ == "__main__":
 					'month': "{:02d}".format(month),
 					'format': 'zip',
 				},
-				'download{:02d}.zip'.format(month))
+				file_path)
+			os.system(f'unzip {file_path} && rm {file_path}')
 	
 	if dl_gesla:
-		# download GESLA data, lacks API access
-		# see https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/gdj3.174
-		raise NotImplementedError("Please download the data manually \
-							from https://www.icloud.com/iclouddrive/0tHXOLCgBBjgmpHecFsfBXLag#GESLA3")
+
+		gesla_dir = os.path.join(store_at, 'GESLA')
+		if not os.path.exists(gesla_dir): os.makedirs(gesla_dir)
+		os.chdir(gesla_dir)
+
+		if os.path.isfile(os.path.join(gesla_dir, 'GESLA3.0_ALL.zip')):
+			os.system('unzip GESLA3.0_ALL.zip && rm GESLA3.0_ALL.zip')
+		else:
+			# download GESLA data, lacks API access
+			# see https://rmets.onlinelibrary.wiley.com/doi/full/10.1002/gdj3.174
+			raise NotImplementedError(f"Please download the data manually \
+							 from https://www.icloud.com/iclouddrive/0tHXOLCgBBjgmpHecFsfBXLag#GESLA3 and place in {gesla_dir}")
+		if not os.path.isfile(os.path.join(gesla_dir, 'GESLA3_ALL 2.csv')):
+			raise NotImplementedError(f"Please download the data manually \
+							 from https://www.icloud.com/iclouddrive/01a8u37HiumNKbg6CpQUEA7-A#GESLA3_ALL_2 and place in {gesla_dir}")
+		
+		os.system(f'mv GESLA3.0_ALL GESLA3')
+		os.system(f'mv "GESLA3_ALL 2.csv" {gesla_dir}')
 	
-	if dl_lsm: 
-		# download land-sea mask, see https://user.iiasa.ac.at/~kinder/gfd/waterLand/readMe.html
-		os.system('wget https://user.iiasa.ac.at/~kinder/gfd/waterLand/landWater2020.tif')
+	if dl_aux: 
+		# download auxiliary data from Zenodo
+
+		aux_dir = os.path.join(store_at, 'aux')
+		if not os.path.exists(aux_dir): os.makedirs(aux_dir)
+		print(f'Downloading auxiliary data to {aux_dir}.')
+		os.chdir(store_at)
+
+		os.system('wget https://zenodo.org/api/records/11846592/files-archive')
+		os.system('unzip files-archive && rm files-archive')
+		os.system('unzip combined_gesla_surge.zip && rm combined_gesla_surge.zip')
+
+		os.system(f'mv IBTrACS.ALL.v04r00.nc {aux_dir}')
+		os.system(f'mv landWater2020_1000m.tif {aux_dir}')
+
+		# for the original high-resolution land-sea masks, please see:
+		# 	download land-sea mask, see https://user.iiasa.ac.at/~kinder/gfd/waterLand/readMe.html
+		# 	os.system('wget https://user.iiasa.ac.at/~kinder/gfd/waterLand/landWater2020.tif')

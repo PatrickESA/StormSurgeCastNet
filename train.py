@@ -256,9 +256,9 @@ def main(config):
 
     print('Setting up data loaders.\n')
     root          = os.path.expanduser(config.root)
-    stats_file    = os.path.join(root, 'stats.npy')
-    splits_file   = os.path.join(root, 'splits_ids.npy')
-    ibtracs_file  = os.path.join(root, 'stats_ibtracs.npy')
+    stats_file    = os.path.join(root, 'aux', 'stats.npy')
+    splits_file   = os.path.join(root, 'aux', 'splits_ids.npy')
+    ibtracs_file  = os.path.join(root, 'aux', 'stats_ibtracs.npy')
 
     stats_data    = None if not os.path.isfile(stats_file) else np.load(stats_file, allow_pickle='TRUE').item()
     splits_ids    = None if not os.path.isfile(splits_file) else np.load(splits_file, allow_pickle='TRUE').item()

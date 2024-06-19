@@ -107,13 +107,17 @@ def main(config):
 
     cozy_printing = ['densification', 'hyperlocal'] 
     print(f'Testing {config.model} in {cozy_printing[config.hyperlocal]} evaluation mode.')
-
-    ibtracs_file  = os.path.join(os.path.expanduser(config.root), 'stats_ibtracs.npy')
-    stats_data    = None if not os.path.isfile('./stats.npy') else np.load('./stats.npy', allow_pickle='TRUE').item()
-    stats_ibtracs = None if not os.path.isfile(ibtracs_file) else np.load(ibtracs_file, allow_pickle='TRUE').item()
-    splits_ids    = None if not os.path.isfile('./splits_ids.npy') else np.load('./splits_ids.npy', allow_pickle='TRUE').item()
     
-    dt_test       = coastalLoader(os.path.expanduser(config.root), split='test', hyperlocal=config.hyperlocal, splits_ids=splits_ids, stats=stats_data, stats_ibtracs=stats_ibtracs, input_len=config.input_t, drop_in=0.0, context_window=config.context, res=config.res, lead_time=config.lead_time, center_gauge=config.center_gauge, only_series=only_series, no_gesla_context=config.no_gesla_context, seed=2) 
+    root          = os.path.expanduser(config.root)
+    stats_file    = os.path.join(root, 'aux', 'stats.npy')
+    splits_file   = os.path.join(root, 'aux', 'splits_ids.npy')
+    ibtracs_file  = os.path.join(root, 'aux', 'stats_ibtracs.npy')
+
+    stats_data    = None if not os.path.isfile(stats_file) else np.load(stats_file, allow_pickle='TRUE').item()
+    splits_ids    = None if not os.path.isfile(splits_file) else np.load(splits_file, allow_pickle='TRUE').item()
+    stats_ibtracs = None if not os.path.isfile(ibtracs_file) else np.load(ibtracs_file, allow_pickle='TRUE').item()
+    
+    dt_test       = coastalLoader(root, split='test', hyperlocal=config.hyperlocal, splits_ids=splits_ids, stats=stats_data, stats_ibtracs=stats_ibtracs, input_len=config.input_t, drop_in=0.0, context_window=config.context, res=config.res, lead_time=config.lead_time, center_gauge=config.center_gauge, only_series=only_series, no_gesla_context=config.no_gesla_context, seed=2) 
     sub_dt_test   = torch.utils.data.Subset(dt_test, range(0, min(config.max_samples_count, len(dt_test))))
     test_loader   = torch.utils.data.DataLoader(sub_dt_test, 
                                                 batch_size=config.batch_size, 
@@ -123,7 +127,7 @@ def main(config):
                                                 num_workers=config.num_workers)
 
     print('Loading GESLA dataset into memory')
-    ncGESLA = xr.open_dataset(filename_or_obj=os.path.join(os.path.expanduser(config.root), 'combined_gesla_surge_5h.nc'), engine='netcdf4').load()
+    ncGESLA = xr.open_dataset(filename_or_obj=os.path.join(root, 'combined_gesla_surge_5h.nc'), engine='netcdf4').load()
     train_points  = [tuple(point) for pdx, point in enumerate(zip(ncGESLA.longitude.values, ncGESLA.latitude.values)) if ncGESLA.isel(station=pdx).station.values in dt_test.splits_ids['train']]
     gesla_points  = gpd.GeoDataFrame(geometry=shapely.points(coords=train_points))
 
