@@ -38,7 +38,6 @@ if __name__ == "__main__":
 		yearIntervals = np.array_split(np.arange(start, end+1), bins)
 
 		for idx, interval in enumerate(yearIntervals):
-			if idx < 3: continue 
 			for jdx, var_name in enumerate(var_long):
 				print(f'Fetching {var_name} ERA5 data for years {interval}')
 				
