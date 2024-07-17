@@ -153,8 +153,9 @@ def load_model(config, model, train_out_layer=True):
 
 # function to load checkpoints of individual and ensemble models
 # (this is used for training and testing scripts)
-def load_checkpoint(config, checkp_dir, model, name):
-    chckp_path = os.path.join(checkp_dir, config.experiment_name, f"{name}.pth.tar")
+def load_checkpoint(config, checkp_dir, model, name, path=None):
+    composed_path = os.path.join(checkp_dir, config.experiment_name, f"{name}.pth.tar")
+    chckp_path    = path if path is not None else composed_path
     print(f'Loading checkpoint {chckp_path}')
     checkpoint = torch.load(chckp_path, map_location=config.device)["state_dict"]
 
