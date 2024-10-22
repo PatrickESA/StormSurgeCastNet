@@ -151,7 +151,7 @@ def load_model(config, model, train_out_layer=True):
     # no return value, models are passed by reference
 
 
-# function to load checkpoints of individual and ensemble models
+# function to load checkpoints of models
 # (this is used for training and testing scripts)
 def load_checkpoint(config, checkp_dir, model, name, path=None):
     composed_path = os.path.join(checkp_dir, config.experiment_name, f"{name}.pth.tar")

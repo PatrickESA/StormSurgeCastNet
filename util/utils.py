@@ -1,7 +1,3 @@
-import re
-
-np_str_obj_array_pattern = re.compile(r"[SaUO]")
-
 # map arg string of written list to list
 def str2list(config, list_args):
     for k, v in vars(config).items():

@@ -17,6 +17,9 @@ class Metric(object):
     def value(self): pass
 
 
+# TODO: evaluating image metrics and aggregation via avg_img_metrics is currently deprecated,
+#       proper evaluation needs to NaN mask targets & predictions (but also implement behavior for flags such as --eval_gtsm_pred).
+#       For now, call test.py for manual evaluation of model checkpoints on test split, in terms of image metrics.
 def img_metrics(target, pred):
     rmse = torch.sqrt(torch.mean(torch.square(target - pred)))
     mae = torch.mean(torch.abs(target - pred))

@@ -6,7 +6,6 @@ import random
 import numpy as np
 from tqdm import tqdm
 from warnings import warn
-from matplotlib import pyplot as plt
 
 os.environ['CUBLAS_WORKSPACE_CONFIG'] = '4096:8'
 
@@ -122,9 +121,6 @@ def iterate(model, data_loader, config, mode="train", epoch=None, device=None):
         # log the loss, computed via model.backward_G() at train time & via model.get_loss_G() at val/test time
         loss_meter.add(model.loss_G.item())
         wandb.log({"train/loss": model.loss_G.item()}, commit=True)
-
-        # after each batch, close any leftover figures
-        plt.close('all')
 
     # --- end of epoch ---
 
@@ -396,11 +392,8 @@ def main(config):
             # use the training loss for validation
             print('Using training loss as validation loss')
             if "val_loss" in val_metrics: val_loss = val_metrics["val_loss"]
-            else: val_loss = val_metrics['val_loss_ensembleAverage']
-
 
             print(f'Validation Loss {val_loss}')
-            print(f'validation image metrics: {val_img_metrics}')
             save_results(val_img_metrics, os.path.join(config.res_dir, config.experiment_name), split=f'val_epoch_{epoch}')
             print(f'\nLogged validation epoch {epoch} metrics to path {os.path.join(config.res_dir, config.experiment_name)}')
 
@@ -442,9 +435,7 @@ def main(config):
     dt_test.storm_dates, dt_test.storm_count = 0, 0
 
     if "test_loss" in test_metrics: test_loss = test_metrics["test_loss"]
-    else: test_loss = test_metrics['test_loss_ensembleAverage']
     print(f'Test Loss {test_loss}')
-    print(f'\nTest image metrics: {test_img_metrics}')
     save_results(test_img_metrics, os.path.join(config.res_dir, config.experiment_name), split='test')
     print(f'\nLogged test metrics to path {os.path.join(config.res_dir, config.experiment_name)}')
 
