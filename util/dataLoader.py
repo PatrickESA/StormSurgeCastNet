@@ -413,9 +413,7 @@ class coastalLoader(Dataset):
             rng = np.random.default_rng(np.random.randint(10000, 99999))
         else:
             rng = np.random.default_rng(self.hashes[pdx])
-
-        print(rng.integers(0, 1e9))
-
+        
         if self.ncGTSM is None:
             # %3. load Copernicus GSTM reanalysis product
             # https://cds.climate.copernicus.eu/cdsapp#!/dataset/sis-water-level-change-indicators?tab=overview
