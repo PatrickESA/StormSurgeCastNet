@@ -35,14 +35,20 @@ def weight_init(m, spread=1.0):
         if m.bias is not None:
             init.normal_(m.bias.data, mean=0, std=spread)
     elif isinstance(m, nn.BatchNorm1d):
-        init.normal_(m.weight.data, mean=0, std=spread)
-        init.constant_(m.bias.data, 0)
+        if m.weight is not None:
+            init.normal_(m.weight.data, mean=0, std=spread)
+        if m.bias is not None:
+            init.constant_(m.bias.data, 0)
     elif isinstance(m, nn.BatchNorm2d):
-        init.normal_(m.weight.data, mean=0, std=spread)
-        init.constant_(m.bias.data, 0)
+        if m.weight is not None:
+            init.normal_(m.weight.data, mean=0, std=spread)
+        if m.bias is not None:
+            init.constant_(m.bias.data, 0)
     elif isinstance(m, nn.BatchNorm3d):
-        init.normal_(m.weight.data, mean=0, std=spread)
-        init.constant_(m.bias.data, 0)
+        if m.weight is not None:
+            init.normal_(m.weight.data, mean=0, std=spread)
+        if m.bias is not None:
+            init.constant_(m.bias.data, 0)
     elif isinstance(m, nn.Linear):
         init.xavier_normal_(m.weight.data, gain=spread)
         try:

@@ -12,6 +12,15 @@ IN_BANDS  = 2 + 3 + 1
 #   1 layer of coarse GTSM predictions (just for supervision purposes)
 OUT_BANDS = 1 + 1
 
+
+def str2bool(val):
+    if val in {None, 'None'}: return None
+    elif isinstance(val, bool): return val
+    elif val.lower() in {'true', 't', 'yes', 'y', '1'}: return True
+    elif val.lower() in {'false', 'f', 'no', 'n', '0'}: return False
+    else: raise argparse.ArgumentTypeError('Boolean value expected.')
+    
+
 def create_parser(mode='train'):
     parser = argparse.ArgumentParser()
     # model parameters
@@ -74,6 +83,7 @@ def create_parser(mode='train'):
     parser.add_argument("--max_lead_times", default=16, type=int, help="Maximum lead time randomly sampled for augmentation at train time")
     parser.add_argument("--film", dest="film", action="store_false", help="whether to use FiLM conditioning or not")
     parser.add_argument("--film_latent", default=32, type=int, help="latent space of the FiLM embedding")
+    parser.add_argument('--cond_norm_affine', type=str2bool, nargs='?', const=None, help='for UTAE: whether to (not) use affine norm layers or use default behavior (None)')
 
     # flags specific to surge forecasting dataset
     parser.add_argument("--max_samples_count", default=int(1e9), type=int, help="count of data (sub-)samples to take") # int(1e9), debug @ 4

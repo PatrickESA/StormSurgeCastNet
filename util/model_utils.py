@@ -36,7 +36,8 @@ def get_generator(config):
             pad_value=config.pad_value,
             padding_mode=config.padding_mode,
             positional_encoding=config.positional_encoding,
-            cond_dim=config.film_latent if config.film else None
+            cond_dim=config.film_latent if config.film else None,
+            cond_norm_affine=config.cond_norm_affine
         )
     elif "metnet3" == config.model:
         model = MetNet3(

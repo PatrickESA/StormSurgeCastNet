@@ -308,6 +308,8 @@ def main(config):
     model.len_epoch = len(train_loader)
     config.N_params = utils.get_ntrainparams(model)
     model = model.to(device)
+    print(f"TOTAL TRAINABLE PARAMETERS: {config.N_params}\n")
+    print(model)
     
     # do random weight initialization
     print('\nInitializing weights randomly.')
@@ -320,8 +322,6 @@ def main(config):
 
     with open(os.path.join(config.res_dir, config.experiment_name, "conf.json"), "w") as file:
         file.write(json.dumps(vars(config), indent=4))
-    print(f"TOTAL TRAINABLE PARAMETERS: {config.N_params}\n")
-    print(model)
 
     # Optimizer and Loss
     model.criterion = losses.get_loss(config)

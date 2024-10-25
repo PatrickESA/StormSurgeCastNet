@@ -41,7 +41,8 @@ class UTAE(nn.Module):
         pad_value=0,
         padding_mode="reflect",
         positional_encoding=True,
-        cond_dim = None
+        cond_dim = None,
+        cond_norm_affine=None
     ):
         """
         U-TAE architecture for spatio-temporal encoding of satellite image time series.
@@ -82,26 +83,24 @@ class UTAE(nn.Module):
             padding_mode (str): Spatial padding strategy for convolutional layers (passed to nn.Conv2d).
             positional_encoding (bool): If False, no positional encoding is used (default True).
             cond_dim (int): latent space of the FiLM embedding (default 32).
+            cond_norm_affine: whether to have affine parameters in norm layers or not
         """
         super(UTAE, self).__init__()
         self.n_stages = len(encoder_widths)
         self.return_maps = return_maps
         self.encoder_widths = encoder_widths
         self.decoder_widths = decoder_widths
-        self.enc_dim = (
-            decoder_widths[0] if decoder_widths is not None else encoder_widths[0]
-        )
-        self.stack_dim = (
-            sum(decoder_widths) if decoder_widths is not None else sum(encoder_widths)
-        )
+        self.enc_dim = (decoder_widths[0] if decoder_widths is not None else encoder_widths[0])
+        self.stack_dim = (sum(decoder_widths) if decoder_widths is not None else sum(encoder_widths))
         self.pad_value = pad_value
         self.encoder   = encoder
+
         if encoder:
             self.return_maps = True
 
         if decoder_widths is not None:
             assert len(encoder_widths) == len(decoder_widths)
-            assert encoder_widths[-1] == decoder_widths[-1]
+            assert encoder_widths[-1]  == decoder_widths[-1]
         else:
             decoder_widths = encoder_widths
         
@@ -112,7 +111,8 @@ class UTAE(nn.Module):
             pad_value=pad_value,
             norm=encoder_norm,
             padding_mode=padding_mode,
-            cond_dim = cond_dim
+            cond_dim = cond_dim,
+            cond_norm_affine=cond_norm_affine
         )
 
         self.down_blocks = nn.ModuleList(
@@ -125,7 +125,8 @@ class UTAE(nn.Module):
                 pad_value=pad_value,
                 norm=encoder_norm,
                 padding_mode=padding_mode,
-                cond_dim = cond_dim
+                cond_dim = cond_dim,
+                cond_norm_affine=cond_norm_affine
             )
             for i in range(self.n_stages - 1)
         )
@@ -142,7 +143,8 @@ class UTAE(nn.Module):
                 norm_up=norm_up, 
                 norm=decoder_norm, 
                 padding_mode=padding_mode,
-                cond_dim = cond_dim
+                cond_dim = cond_dim,
+                cond_norm_affine=cond_norm_affine
             )
             for i in range(self.n_stages - 1, 0, -1)
         )
@@ -270,7 +272,8 @@ class ConvLayer(nn.Module):
         n_groups=4,
         last_relu=True,
         padding_mode="reflect",
-        cond_dim = None # lead_time_embed_dim
+        cond_dim = None, # lead_time_embed_dim
+        cond_norm_affine=None
     ):
         super(ConvLayer, self).__init__()
 
@@ -282,13 +285,17 @@ class ConvLayer(nn.Module):
 
         if norm == "batch":
             nl = nn.BatchNorm2d
+            default_use_affine = True
         elif norm == "instance":
             nl = nn.InstanceNorm2d
+            default_use_affine = False
         elif norm == "group":
-            nl = lambda num_feats: nn.GroupNorm(
+            nl = lambda num_feats, affine: nn.GroupNorm(
                 num_channels=num_feats,
                 num_groups=n_groups,
+                affine=affine
             )
+            default_use_affine = True
         else:
             nl = None
         for i in range(len(nkernels) - 1):
@@ -304,7 +311,13 @@ class ConvLayer(nn.Module):
             )
             out_dim.append(nkernels[i + 1])
             if nl is not None:
-                layers.append(nl(nkernels[i + 1]))
+                # If cond will be used, then set the affine parameter of the norm.
+                is_norm_then_relu = last_relu or i < len(nkernels) - 2
+                if exists(cond_dim) and exists(cond_norm_affine) and is_norm_then_relu:
+                    use_affine = cond_norm_affine
+                else:
+                    use_affine = default_use_affine
+                layers.append(nl(nkernels[i + 1], affine=use_affine))
 
             uses_relu = False
             if last_relu: # append a ReLU after the current CONV layer
@@ -321,10 +334,10 @@ class ConvLayer(nn.Module):
         #   note: for Met-Net3, 1 block is always 2 CONV in https://github.com/lucidrains/metnet3-pytorch/blob/a0b107d7f4b792f612341a33b63b54f79200f998/metnet3_pytorch/metnet3_pytorch.py#L164
 
         if exists(cond_dim):
-            self.mlp = [nn.Sequential(
+            self.mlp = nn.ModuleList([nn.Sequential(
                 nn.ReLU(),
                 # linear mapping from embedding dimension to channel dimensions of CONV
-                nn.Linear(cond_dim, dim_out * 2)).to('cuda') for idx, dim_out in enumerate(out_dim) if self.norm_then_relu[idx]]
+                nn.Linear(cond_dim, dim_out * 2)) for idx, dim_out in enumerate(out_dim) if self.norm_then_relu[idx]])
 
     def forward(self, input, lead=None):
 
@@ -360,7 +373,8 @@ class ConvBlock(TemporallySharedBlock):
         last_relu=True,
         k=3, s=1, p=1,
         padding_mode="reflect",
-        cond_dim = None # lead_time_embed_dim
+        cond_dim = None, # lead_time_embed_dim
+        cond_norm_affine=None
     ):
         super(ConvBlock, self).__init__(pad_value=pad_value)
         self.conv = ConvLayer(
@@ -369,7 +383,8 @@ class ConvBlock(TemporallySharedBlock):
             last_relu=last_relu,
             k=k, s=s, p=p,
             padding_mode=padding_mode,
-            cond_dim = cond_dim
+            cond_dim = cond_dim,
+            cond_norm_affine=cond_norm_affine
         )
 
     def forward(self, input, lead=None):
@@ -385,7 +400,8 @@ class DownConvBlock(TemporallySharedBlock):
         pad_value=None,
         norm="batch",
         padding_mode="reflect",
-        cond_dim = None # lead_time_embed_dim
+        cond_dim = None, # lead_time_embed_dim
+        cond_norm_affine=None
     ):
         super(DownConvBlock, self).__init__(pad_value=pad_value)
         self.down = ConvLayer(
@@ -393,13 +409,15 @@ class DownConvBlock(TemporallySharedBlock):
             norm=norm,
             k=k, s=s, p=p,
             padding_mode=padding_mode,
-            cond_dim = cond_dim
+            cond_dim = cond_dim,
+            cond_norm_affine=cond_norm_affine
         )
         self.conv1 = ConvLayer(
             nkernels=[d_in, d_out],
             norm=norm,
             padding_mode=padding_mode,
-            cond_dim = cond_dim
+            cond_dim = cond_dim,
+            cond_norm_affine=cond_norm_affine
         )
         self.conv2 = ConvLayer(
             nkernels=[d_out, d_out],
@@ -416,13 +434,26 @@ class DownConvBlock(TemporallySharedBlock):
         return out
 
 
-def get_norm_layer(out_channels, num_feats, n_groups=4, layer_type='BatchNorm'):
-    if layer_type == 'batch':
-        return nn.BatchNorm2d(out_channels)
-    elif layer_type == 'instance':
-        return nn.InstanceNorm2d(out_channels)
-    elif layer_type == 'group':
-        return nn.GroupNorm(num_channels=num_feats, num_groups=n_groups)
+def get_norm_layer(out_channels, num_feats, n_groups=4, layer_type="BatchNorm", affine=None):
+    if layer_type == "batch":
+        if affine is None: affine = True
+        return nn.BatchNorm2d(out_channels, affine=affine)
+    elif layer_type == "instance":
+        if affine is None: affine = False
+        return nn.InstanceNorm2d(out_channels, affine=affine)
+    elif layer_type == "group":
+        if affine is None: affine = True
+        return nn.GroupNorm(num_channels=num_feats, num_groups=n_groups, affine=affine)
+
+
+
+def apply_conditioning_scale_shift(input, lead, mlp):
+    conditioning = mlp(lead)
+    conditioning = rearrange(conditioning.flatten(start_dim=1), "b c -> b c 1 1")
+    scale, shift = conditioning.chunk(2, dim=1)
+    out = input * (scale + 1) + shift
+    return out
+
 
 class UpConvBlock(nn.Module):
     def __init__(self, 
@@ -435,34 +466,36 @@ class UpConvBlock(nn.Module):
                  n_groups=4, 
                  d_skip=None, 
                  padding_mode="reflect",
-                 cond_dim = None # lead_time_embed_dim
+                 cond_dim = None, # lead_time_embed_dim
+                 cond_norm_affine=None
                  ):
         super(UpConvBlock, self).__init__()
 
+        self.cond_dim = cond_dim
         d = d_out if d_skip is None else d_skip
-        out_dims = []
 
-        if norm_skip in ['group', 'batch', 'instance']:
+        # apply another CONV and norm to the skipped paired map
+        affine = cond_norm_affine if exists(cond_dim) else None
+        self.skip_uses_norm = norm_skip in ["group", "batch", "instance"]
+        if self.skip_uses_norm:
             self.skip_conv = nn.Sequential(
-            nn.Conv2d(in_channels=d, out_channels=d, kernel_size=1),
-            get_norm_layer(d, d, n_groups, norm_skip), #nn.BatchNorm2d(d),
-            # FiLM here
-            nn.ReLU())
-            out_dims.append(d)
+                nn.Conv2d(in_channels=d, out_channels=d, kernel_size=1),
+                get_norm_layer(d, d, n_groups, norm_skip, affine=affine),
+                nn.ReLU(),
+            )
+            if exists(cond_dim):
+                self.skip_cond_mlp = nn.Sequential(nn.ReLU(), nn.Linear(cond_dim, d * 2))
         else:
-            self.skip_conv = nn.Sequential(
-            nn.Conv2d(in_channels=d, out_channels=d, kernel_size=1),
-            nn.ReLU())
+            self.skip_conv = nn.Sequential(nn.Conv2d(in_channels=d, out_channels=d, kernel_size=1), nn.ReLU())
         
         # transposed CONV layer to perform upsampling
-
-        if norm_up in ['group', 'batch', 'instance']:
-            self.up = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=d_in, out_channels=d_out, kernel_size=k, stride=s, padding=p),
-            get_norm_layer(d_out, d_out, n_groups, norm_up), #nn.BatchNorm2d(d_out),
-            # FiLM here
-            nn.ReLU())
-            out_dims.append(d_out)
+        self.up_uses_norm = norm_up in ["group", "batch", "instance"]
+        if self.up_uses_norm:
+            self.up = nn.Sequential(nn.ConvTranspose2d(in_channels=d_in, out_channels=d_out, kernel_size=k, stride=s, padding=p),
+                                    get_norm_layer(d_out, d_out, n_groups, norm_up, affine=affine), #nn.BatchNorm2d(d_out),
+                                    nn.ReLU())
+            if exists(cond_dim):
+                self.up_cond_mlp = nn.Sequential(nn.ReLU(), nn.Linear(cond_dim, d_out * 2))
         else:
             self.up = nn.Sequential(
             nn.ConvTranspose2d(in_channels=d_in, out_channels=d_out, kernel_size=k, stride=s, padding=p),
@@ -471,61 +504,32 @@ class UpConvBlock(nn.Module):
         self.conv1 = ConvLayer(nkernels=[d_out + d, d_out], 
                                norm=norm, 
                                cond_dim = cond_dim, # FiLM here
+                               cond_norm_affine=cond_norm_affine,
                                padding_mode=padding_mode, # removing  downsampling relu in UpConvBlock because of MobileNet2
         )
-        out_dims.append(d_out)
+        
         self.conv2 = ConvLayer(nkernels=[d_out, d_out], 
                                norm=norm, 
                                padding_mode=padding_mode, 
                                last_relu=False # removing  last relu in UpConvBlock because it adds onto residual connection
         )
 
-        if exists(cond_dim):
-            # normalization layers of: skip connection CONV, upsampling CONV and CONV1
-            num_mlp = [norm_skip in ['group', 'batch', 'instance'], norm_up in ['group', 'batch', 'instance'], True]
-            # define an MLP for each of these 
-            self.mlp = [nn.Sequential(
-                        nn.ReLU(),
-                        # linear mapping from embedding dimension to channel dimensions of CONV
-                        nn.Linear(cond_dim, dim_out * 2)).to('cuda') for idx, dim_out in enumerate(out_dims) if num_mlp[idx]]
-        else: self.mlp = None
 
     def forward(self, input, skip, lead=None):
+
+        assert not (exists(self.cond_dim) ^ exists(lead))
+
+        skip = self.skip_conv(skip)
+        if self.skip_uses_norm and exists(lead):
+            skip = apply_conditioning_scale_shift(skip, lead, self.skip_cond_mlp)
+
+        out = self.up(input)
+        if self.up_uses_norm and exists(lead):
+            out = apply_conditioning_scale_shift(out, lead, self.up_cond_mlp)
         
-        assert not (exists(self.mlp) ^ exists(lead))
-
-        # at each MLP (1 MLP per normalized CONV layer) compute the conditioning
-        scale_shift = None
-        if exists(self.mlp) and exists(lead):
-            lead_time = [layer(lead) for layer in self.mlp]
-            lead_time = [rearrange(lead_item.flatten(start_dim=1), 'b c -> b c 1 1') for lead_item in lead_time]
-            scale_shift = [lead_item.chunk(2, dim = 1) for lead_item in lead_time]
-
-        idx = 0
-        for idx, layer in enumerate(self.skip_conv):
-            skip = layer(skip)
-            isNormLayer = np.any([isinstance(layer, norm) for norm in [nn.BatchNorm2d, nn.InstanceNorm2d, nn.GroupNorm]])
-            # apply linear transform on CONV output
-            # (following a normalization, and preceding an output non-linearity)
-            if exists(scale_shift) and isNormLayer:
-                scale, shift = scale_shift[idx]
-                skip = skip * (scale + 1) + shift
-                idx  = idx + 1
-
-        for idx, layer in enumerate(self.up):
-            input = layer(input)
-            isNormLayer = np.any([isinstance(layer, norm) for norm in [nn.BatchNorm2d, nn.InstanceNorm2d, nn.GroupNorm]])
-            # apply linear transform on CONV output
-            # (following a normalization, and preceding an output non-linearity)
-            if exists(scale_shift) and isNormLayer and isinstance(self.up[-1], nn.ReLU):
-                scale, shift = scale_shift[idx]
-                input = input * (scale + 1) + shift
-                idx   = idx + 1
-        out = input
-        
-        out = torch.cat([out, skip], dim=1) # concat '' with paired encoder map
-        out = self.conv1(out, lead) # CONV again
-        out = out + self.conv2(out) # conv with residual
+        out = torch.cat([out, skip], dim=1)  # concat '' with paired encoder map
+        out = self.conv1(out, lead)  # CONV again
+        out = out + self.conv2(out)  # conv with residual
         return out
 
 

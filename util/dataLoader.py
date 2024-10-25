@@ -423,7 +423,7 @@ class coastalLoader(Dataset):
             #print("Loading ERA5 data.")
             era5_path   = os.path.join(self.root_dir, 'ERA5', 'stormSurge_hourly_79_18', '')
             paths       = glob.glob(os.path.join(era5_path, '*.nc'))
-            self.ncERA5 = xr.open_mfdataset(paths)
+            self.ncERA5 = xr.open_mfdataset(paths) # if encountering performance bottleneck, try using flag chunks='auto'
 
         # fetch ID of gauge, use e.g. with: self.meta.loc[gauge_id]
         gauge_id     = self.split_idx[pdx] 
