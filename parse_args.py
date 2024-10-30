@@ -5,7 +5,8 @@ import argparse
 #   2 layers of sparse in-situ measurements and dense GTSM simulations
 #   3 layers of ERA5 data
 #   1 layer of valid/invalid mask for indicating location of sparse observations
-IN_BANDS  = 2 + 3 + 1
+# note: this assumes all channels are used, but depends on --era5 & --gtsm
+#IN_BANDS  = 2 + 3 + 1
 
 # output:
 #   1 layer of densified in-situ measurements
@@ -48,7 +49,7 @@ def create_parser(mode='train'):
     parser.add_argument("--device",default="cuda",type=str,help="Name of device to use for tensor computations (cuda/cpu)",)
     parser.add_argument("--display_step", default=10, type=int, help="Interval in batches between display of training metrics",)
 
-    parser.add_argument("--in_dim", default=IN_BANDS, type=int, help="dimension of the input features, used for defining models")
+    #parser.add_argument("--in_dim", default=IN_BANDS, type=int, help="dimension of the input features, used for defining models")
     parser.add_argument("--out_conv", default=f"[{OUT_BANDS}]", help="output CONV, note: if inserting another layer then consider treating normalizations separately")
     parser.add_argument("--mean_nonLinearity", dest="mean_nonLinearity", action="store_true", help="whether to apply a sigmoidal output nonlinearity to the mean prediction") 
 

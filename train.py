@@ -46,6 +46,14 @@ if config.model in ['lstm', 'conv_lstm']:
             warn('A 1D method in combination with 2D target data was selected. Changing to 1D data.')
             config.use_series_target, config.center_gauge, config.context = True, True, 2
 
+# update input channel count depending on actual input data usage
+# input:
+#   2 layers of sparse in-situ measurements and dense GTSM simulations
+#   3 layers of ERA5 data
+#   1 layer of valid/invalid mask for indicating location of sparse observations
+# note: this assumes all channels are used, but depends on --era5 & --gtsm
+IN_BANDS  = 2 + 3 + 1
+config.in_dim = IN_BANDS - 3*(not config.era5) - (not config.gtsm)
 
 # predict:
 #   1 layer of densified in-situ measurements
