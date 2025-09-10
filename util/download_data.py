@@ -153,7 +153,8 @@ if __name__ == "__main__":
 		print(f'Downloading auxiliary data to {aux_dir}.')
 		os.chdir(store_at)
 
-		os.system('wget https://zenodo.org/api/records/11846592/files-archive')
+		# note: please use ID 12067776, not the outdated ID 11846592
+		os.system('wget https://zenodo.org/api/records/12067776/files-archive')
 		os.system('unzip files-archive && rm files-archive')
 		os.system('unzip combined_gesla_surge.zip && rm combined_gesla_surge.zip')
 
