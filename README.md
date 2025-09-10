@@ -36,7 +36,7 @@ The code is written in Python 3 and uses PyTorch 2.0. It is strongly recommended
 
 #### Data
 
-Create an account on the [Copernicus CDS](https://cds.climate.copernicus.eu/#!/home) platform and install the [API](https://cds.climate.copernicus.eu/api-how-to) for data access. Download (parts of) the needed data
+Create an account on the [Copernicus CDS](https://cds.climate.copernicus.eu/#!/home) platform and install the [API](https://cds.climate.copernicus.eu/how-to-api) for data access. Download (parts of) the needed data
 ```
 python ./util/download_data.py
  ```
